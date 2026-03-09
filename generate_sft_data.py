@@ -134,39 +134,48 @@ def main(args):
             )
         )
 
-    # ── Generation ────────────────────────────────────────────────────────────
-    print(f"Starting vLLM generation for {len(formatted_prompts)} prompts...")
-    outputs = llm.generate(formatted_prompts, sampling_params_list)
+    # ── Continuous Generation & Saving ────────────────────────────────────────
+    CHUNK_SIZE = 500  # Process and save every 500 prompts
+    print(f"Starting vLLM generation for {len(formatted_prompts)} prompts in chunks of {CHUNK_SIZE}...")
 
-    # ── Save Results ──────────────────────────────────────────────────────────
-    with open(out_path, "a", encoding="utf-8") as out_f:
-        for item, output in zip(prompts_to_gen, outputs):
-            # vllm returns the generated text in output.outputs[0].text
-            generated_text = output.outputs[0].text
-            
-            # Clean up ChatML tags if present
-            generated_text = generated_text.replace("<|im_end|>", "").strip()
-            
-            # ตรวจสอบว่ามี <think> tag ออกมาไหม เพื่อเก็บเป็น meta-data
-            has_think = "<think>" in generated_text
-            
-            record = {
-                "domain":   item["domain"],
-                "prompt":   item["prompt"],
-                "response": generated_text,
-                "intended_thinking": item.get("use_thinking", True),
-                "actual_thinking": has_think
-            }
-            out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    first_has_think = None
+
+    for i in range(0, len(formatted_prompts), CHUNK_SIZE):
+        chunk_prompts = formatted_prompts[i : i + CHUNK_SIZE]
+        chunk_params  = sampling_params_list[i : i + CHUNK_SIZE]
+        chunk_items   = prompts_to_gen[i : i + CHUNK_SIZE]
+
+        print(f"\n---> Processing Chunk {i//CHUNK_SIZE + 1}/{(len(formatted_prompts)-1)//CHUNK_SIZE + 1} ({len(chunk_prompts)} prompts)...")
+        outputs = llm.generate(chunk_prompts, chunk_params)
+
+        # ── Save Results Immediately for this Chunk ───────────────────────────
+        with open(out_path, "a", encoding="utf-8") as out_f:
+            for item, output in zip(chunk_items, outputs):
+                generated_text = output.outputs[0].text
+                generated_text = generated_text.replace("<|im_end|>", "").strip()
+                has_think = "<think>" in generated_text
+                
+                if first_has_think is None:
+                    first_has_think = has_think
+                
+                record = {
+                    "domain":   item["domain"],
+                    "prompt":   item["prompt"],
+                    "response": generated_text,
+                    "intended_thinking": item.get("use_thinking", True),
+                    "actual_thinking": has_think
+                }
+                out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        
+        # Free up memory
+        del outputs
 
     total = existing + len(prompts_to_gen)
     print(f"\nDone! {total} samples saved to {out_path}")
 
-    # Thinking mode sanity check (Check the first generated item)
-    if outputs:
-        first_gen = outputs[0].outputs[0].text
-        has_think = "<think>" in first_gen
-        print(f"Thinking tags present in first generated output: {'✅' if has_think else '⚠️ NO/Not Confirmed'}")
+    # Thinking mode sanity check
+    if first_has_think is not None:
+        print(f"Thinking tags present in first generated output: {'✅' if first_has_think else '⚠️ NO/Not Confirmed'}")
 
     # ── Push Dataset to Hub ───────────────────────────────────────────────────
     if getattr(config, "PUSH_TO_HUB", False) and getattr(config, "HF_DATASET_REPO", "") and not args.dry_run:
