@@ -94,6 +94,10 @@ def train_epoch(
         total_loss   += outputs.loss.item() * n_tokens
         total_tokens += n_tokens
 
+        # แสดง loss ทุก batch เลย (real-time)
+        avg_loss = total_loss / max(total_tokens, 1)
+        pbar.set_postfix({"loss": f"{avg_loss:.4f}", "step": step, "nan": nan_count})
+
         # Gradient accumulation
         if (batch_idx + 1) % grad_accum == 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
