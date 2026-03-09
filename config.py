@@ -64,8 +64,8 @@ NOTHINK_PARAMS = {
 
 # ─── SFT Phase 1 ──────────────────────────────────────────────────────────────
 SFT_EPOCHS          = 2       # warm-up เท่านั้น อย่า overfit
-SFT_BATCH_SIZE      = 2       # per GPU (ลดลงเพราะ seq_len 8192)
-SFT_GRAD_ACCUM      = 16      # effective batch = 32
+SFT_BATCH_SIZE      = 4       # per GPU (จุดคุ้มค่า seq_len 4096 บน H100)
+SFT_GRAD_ACCUM      = 8       # effective batch = 32
 SFT_LR              = 2e-5
 SFT_LR_SCHEDULER    = "cosine"
 SFT_WARMUP_RATIO    = 0.05
@@ -75,8 +75,8 @@ SFT_SAVE_STEPS      = 500
 
 # ─── Distillation Phase 2 ─────────────────────────────────────────────────────
 DISTILL_EPOCHS       = 3
-DISTILL_BATCH_SIZE   = 2       # ลดลงเพราะ seq_len 8192
-DISTILL_GRAD_ACCUM   = 16      # effective batch = 32
+DISTILL_BATCH_SIZE   = 4       # จุดคุ้มค่า seq_len 4096 บน H100
+DISTILL_GRAD_ACCUM   = 8       # effective batch = 32
 DISTILL_LR           = 1e-5
 DISTILL_LR_SCHEDULER = "cosine"
 DISTILL_WARMUP_RATIO = 0.05
@@ -90,7 +90,7 @@ ALPHA          = 0.5      # KL weight; CE weight = (1 - ALPHA)
 TOP_K_LOGITS   = 50       # เก็บแค่ top-K logits เพื่อประหยัด RAM
 
 # ─── Sequence ─────────────────────────────────────────────────────────────────
-MAX_SEQ_LEN = 8192        # ดันสุด! Qwen3.5 รองรับ 32k แต่ 8k คือจุดคุ้มค่าบน H100 80GB
+MAX_SEQ_LEN = 4096        # 2x เดิม, ยาวพอสำหรับ <think> chains + เร็ว 4x กว่า 8192
 
 # ─── Misc ─────────────────────────────────────────────────────────────────────
 SEED            = 42
