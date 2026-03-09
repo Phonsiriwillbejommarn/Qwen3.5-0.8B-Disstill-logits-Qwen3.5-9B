@@ -165,6 +165,24 @@ def main(args):
         has_think = "<think>" in first_gen
         print(f"Thinking tags present in first generated output: {'✅' if has_think else '⚠️ NO/Not Confirmed'}")
 
+    # ── Push Dataset to Hub ───────────────────────────────────────────────────
+    if getattr(config, "PUSH_TO_HUB", False) and getattr(config, "HF_DATASET_REPO", "") and not args.dry_run:
+        print(f"\nPushing dataset to Hugging Face Hub ({config.HF_DATASET_REPO})...")
+        try:
+            from huggingface_hub import HfApi
+            api = HfApi()
+            api.create_repo(repo_id=config.HF_DATASET_REPO, repo_type="dataset", exist_ok=True)
+            api.upload_file(
+                path_or_fileobj=out_path,
+                path_in_repo="sft_data.jsonl",
+                repo_id=config.HF_DATASET_REPO,
+                repo_type="dataset",
+                commit_message="Upload newly generated SFT dataset"
+            )
+            print("✅ Successfully pushed dataset to Hub!")
+        except Exception as e:
+            print(f"⚠️ Failed to push dataset to Hub: {e}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate SFT data from teacher model using vLLM")

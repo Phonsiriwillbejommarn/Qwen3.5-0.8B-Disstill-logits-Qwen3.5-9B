@@ -32,7 +32,7 @@ def load_teacher(device: str = "cuda:0") -> tuple:
         torch_dtype=torch.bfloat16,
         device_map=device,
         trust_remote_code=True,
-        attn_implementation="flash_attention_2" if config.USE_FLASH_ATTN else "eager",
+        attn_implementation="sdpa" if getattr(config, "USE_SDPA", True) else "eager",
     )
     model.eval()
     print(f"  Teacher loaded — params: {sum(p.numel() for p in model.parameters()) / 1e9:.1f}B")
@@ -66,7 +66,7 @@ def load_student(
         torch_dtype=torch.float16,
         device_map=device,
         trust_remote_code=True,
-        attn_implementation="flash_attention_2" if config.USE_FLASH_ATTN else "eager",
+        attn_implementation="sdpa" if getattr(config, "USE_SDPA", True) else "eager",
     )
     print(f"  Student loaded — params: {sum(p.numel() for p in model.parameters()) / 1e6:.0f}M")
     return model, tokenizer
