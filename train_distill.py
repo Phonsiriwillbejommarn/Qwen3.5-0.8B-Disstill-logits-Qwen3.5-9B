@@ -238,6 +238,8 @@ def main(args):
     log_path   = os.path.join(config.LOG_DIR, "distill_log.jsonl")
     start_time = time.time()
     optimizer.zero_grad()
+    
+    saved_ckpt_dirs = []  # Track saved checkpoints for deletion
 
     for epoch in range(epochs):
         epoch_total  = 0.0
@@ -290,13 +292,14 @@ def main(args):
 
             # Step-based checkpoint saving
             if n_steps == 1 or n_steps % config.DISTILL_SAVE_STEPS == 0:
-                ckpt_dir = os.path.join(config.OUTPUT_DIR, f"step_{n_steps}")
+                ckpt_name = f"epoch_{epoch+1}_step_{n_steps}"
+                ckpt_dir = os.path.join(config.OUTPUT_DIR, ckpt_name)
                 os.makedirs(ckpt_dir, exist_ok=True)
                 student.save_pretrained(ckpt_dir)
                 s_tokenizer.save_pretrained(ckpt_dir)
                 torch.save(optimizer.state_dict(), os.path.join(ckpt_dir, "optimizer.pt"))
                 torch.save(scheduler.state_dict(), os.path.join(ckpt_dir, "scheduler.pt"))
-                print(f"\n💾 Saved checkpoint (Model + Optimizer) step {n_steps} → {ckpt_dir}")
+                print(f"\n💾 Saved {ckpt_name} (Model + Optimizer) → {ckpt_dir}")
 
                 if config.PUSH_TO_HUB and not args.dry_run:
                     try:
@@ -305,13 +308,36 @@ def main(args):
                         api.upload_folder(
                             folder_path=ckpt_dir,
                             repo_id=config.HF_DISTILL_REPO_ID,
-                            path_in_repo=f"distill_step_{n_steps}",
+                            path_in_repo=ckpt_name,
                             repo_type="model",
-                            commit_message=f"Distill checkpoint step {n_steps} (Model + Optimizer)"
+                            commit_message=f"Distill checkpoint {ckpt_name} (Model + Optimizer)"
                         )
-                        print(f"  ✅ Pushed distill step {n_steps} to Hub!")
+                        print(f"  ✅ Pushed {ckpt_name} to Hub!")
                     except Exception as e:
                         print(f"  ⚠️ Hub push failed: {e}")
+                        
+                # Keep only the last 2 checkpoints
+                saved_ckpt_dirs.append((ckpt_dir, ckpt_name))
+                if len(saved_ckpt_dirs) > 2:
+                    old_ckpt_dir, old_ckpt_name = saved_ckpt_dirs.pop(0)
+                    
+                    # Delete locally
+                    if os.path.exists(old_ckpt_dir):
+                        import shutil
+                        shutil.rmtree(old_ckpt_dir)
+                        print(f"  🗑️ Deleted old local checkpoint: {old_ckpt_name}")
+                        
+                    # Delete from HF Hub
+                    if config.PUSH_TO_HUB and not args.dry_run:
+                        try:
+                            api.delete_folder(
+                                folder_path=old_ckpt_name,
+                                repo_id=config.HF_DISTILL_REPO_ID,
+                                repo_type="model"
+                            )
+                            print(f"  🗑️ Deleted old Hub checkpoint: {old_ckpt_name}")
+                        except Exception as e:
+                            print(f"  ⚠️ Hub delete failed for {old_ckpt_name}: {e}")
 
             if args.dry_run and n_steps >= args.max_steps:
                 break
