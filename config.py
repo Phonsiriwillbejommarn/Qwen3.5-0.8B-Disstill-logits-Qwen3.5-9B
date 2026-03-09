@@ -83,7 +83,7 @@ DISTILL_LR_SCHEDULER = "cosine"
 DISTILL_WARMUP_RATIO = 0.05
 DISTILL_MAX_GRAD_NORM= 1.0
 DISTILL_LOGGING_STEPS= 1       # แสดง loss ทุก step เลย
-DISTILL_SAVE_STEPS   = 50      # เซฟเช็คพ้อยท์ทุก 50 steps
+DISTILL_SAVE_STEPS   = 5       # เซฟเช็คพ้อยท์ทุก 5 steps จริง (~22 นาที/เซฟ)
 
 # KL distillation settings
 KL_TEMPERATURE = 2.0      # temperature scaling สำหรับ soft labels
