@@ -211,6 +211,28 @@ def main(args):
             print("⚠️  Warning: SFT loss very low (<0.3). Risk of overfitting!")
             print("   Consider stopping early. Distillation may not improve much.")
 
+        # ── Intermediate save ────────────────────────────────────────────────
+        epoch_ckpt = os.path.join(config.SFT_CKPT_DIR, f"epoch_{epoch+1}")
+        student.save_pretrained(epoch_ckpt)
+        tokenizer.save_pretrained(epoch_ckpt)
+        print(f"  Saved SFT epoch checkpoint → {epoch_ckpt}")
+        
+        if config.PUSH_TO_HUB and not args.dry_run:
+            print(f"  Pushing SFT epoch {epoch+1} to Hub...")
+            try:
+                api = HfApi()
+                api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+                api.upload_folder(
+                    folder_path=epoch_ckpt,
+                    repo_id=config.HF_REPO_ID,
+                    path_in_repo=f"sft_epoch_{epoch+1}",
+                    repo_type="model",
+                    commit_message=f"Upload SFT Checkpoint Epoch {epoch+1}"
+                )
+                print(f"  ✅ Uploaded SFT epoch {epoch+1} to Hub!")
+            except Exception as e:
+                print(f"  ⚠️ Failed to upload SFT epoch {epoch+1} to Hub: {e}")
+
     # ── Save checkpoint ────────────────────────────────────────────────────────
     print(f"\nSaving SFT checkpoint to {config.SFT_CKPT_DIR}...")
     student.save_pretrained(config.SFT_CKPT_DIR)

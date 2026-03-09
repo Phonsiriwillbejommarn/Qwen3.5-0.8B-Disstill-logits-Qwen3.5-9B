@@ -311,6 +311,22 @@ def main(args):
         student.save_pretrained(epoch_ckpt)
         s_tokenizer.save_pretrained(epoch_ckpt)
         print(f"  Saved epoch checkpoint → {epoch_ckpt}")
+        
+        if config.PUSH_TO_HUB and not args.dry_run:
+            print(f"  Pushing epoch {epoch+1} to Hub...")
+            try:
+                api = HfApi()
+                api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+                api.upload_folder(
+                    folder_path=epoch_ckpt,
+                    repo_id=config.HF_REPO_ID,
+                    path_in_repo=f"epoch_{epoch+1}",
+                    repo_type="model",
+                    commit_message=f"Upload Distillation Checkpoint Epoch {epoch+1}"
+                )
+                print(f"  ✅ Uploaded epoch {epoch+1} to Hub!")
+            except Exception as e:
+                print(f"  ⚠️ Failed to upload epoch {epoch+1} to Hub: {e}")
 
     # ── Final save ─────────────────────────────────────────────────────────────
     student.save_pretrained(config.OUTPUT_DIR)
