@@ -289,7 +289,7 @@ def main(args):
                     }, step=n_steps)
 
             # Step-based checkpoint saving
-            if n_steps % config.DISTILL_SAVE_STEPS == 0:
+            if n_steps == 1 or n_steps % config.DISTILL_SAVE_STEPS == 0:
                 ckpt_dir = os.path.join(config.OUTPUT_DIR, f"step_{n_steps}")
                 os.makedirs(ckpt_dir, exist_ok=True)
                 student.save_pretrained(ckpt_dir)
