@@ -93,6 +93,9 @@ def main(args):
         dtype=config.DTYPE,  # usually "bfloat16" for H100
         gpu_memory_utilization=gpu_memory_utilization,
         tensor_parallel_size=1, # Change if using multiple GPUs for a single model
+        enforce_eager=True,      # Prevent CUDA graph compilation hangs
+        max_num_seqs=64,         # Prevent OOM/deadlocks on massive batches
+        disable_custom_all_reduce=True,
     )
     tokenizer = llm.get_tokenizer()
 
