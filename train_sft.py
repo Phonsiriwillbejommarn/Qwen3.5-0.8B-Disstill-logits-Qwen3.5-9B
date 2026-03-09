@@ -127,7 +127,9 @@ def train_epoch(
                 os.makedirs(ckpt_dir, exist_ok=True)
                 model.save_pretrained(ckpt_dir)
                 tokenizer.save_pretrained(ckpt_dir)
-                print(f"\n💾 Saved checkpoint step {step} → {ckpt_dir}")
+                torch.save(optimizer.state_dict(), os.path.join(ckpt_dir, "optimizer.pt"))
+                torch.save(scheduler.state_dict(), os.path.join(ckpt_dir, "scheduler.pt"))
+                print(f"\n💾 Saved checkpoint (Model + Optimizer) step {step} → {ckpt_dir}")
 
                 if push_to_hub and not dry_run:
                     try:

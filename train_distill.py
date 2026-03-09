@@ -288,6 +288,31 @@ def main(args):
                         "train/epoch": epoch + (batch_idx / len(dataloader))
                     }, step=n_steps)
 
+            # Step-based checkpoint saving
+            if n_steps % config.DISTILL_SAVE_STEPS == 0:
+                ckpt_dir = os.path.join(config.OUTPUT_DIR, f"step_{n_steps}")
+                os.makedirs(ckpt_dir, exist_ok=True)
+                student.save_pretrained(ckpt_dir)
+                s_tokenizer.save_pretrained(ckpt_dir)
+                torch.save(optimizer.state_dict(), os.path.join(ckpt_dir, "optimizer.pt"))
+                torch.save(scheduler.state_dict(), os.path.join(ckpt_dir, "scheduler.pt"))
+                print(f"\n💾 Saved checkpoint (Model + Optimizer) step {n_steps} → {ckpt_dir}")
+
+                if config.PUSH_TO_HUB and not args.dry_run:
+                    try:
+                        api = HfApi()
+                        api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+                        api.upload_folder(
+                            folder_path=ckpt_dir,
+                            repo_id=config.HF_REPO_ID,
+                            path_in_repo=f"distill_step_{n_steps}",
+                            repo_type="model",
+                            commit_message=f"Distill checkpoint step {n_steps}"
+                        )
+                        print(f"  ✅ Pushed distill step {n_steps} to Hub!")
+                    except Exception as e:
+                        print(f"  ⚠️ Hub push failed: {e}")
+
             if args.dry_run and n_steps >= args.max_steps:
                 break
 
