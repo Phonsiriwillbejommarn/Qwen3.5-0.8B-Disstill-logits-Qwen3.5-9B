@@ -1,0 +1,28 @@
+# Python / General
+__pycache__/
+*.pyc
+.env
+venv/
+env/
+
+# Datasets
+data/
+*.jsonl
+*.csv
+*.json
+
+# Model Weights & Checkpoints
+*.pt
+*.bin
+*.safetensors
+checkpoint-*/
+models/
+runs/
+
+# Logs
+*.log
+training_output.log
+wandb/
+
+# OS Explorer
+.DS_Store
