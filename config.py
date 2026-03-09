@@ -64,25 +64,25 @@ NOTHINK_PARAMS = {
 
 # ─── SFT Phase 1 ──────────────────────────────────────────────────────────────
 SFT_EPOCHS          = 2       # warm-up เท่านั้น อย่า overfit
-SFT_BATCH_SIZE      = 4       # per GPU (จุดคุ้มค่า seq_len 4096 บน H100)
-SFT_GRAD_ACCUM      = 8       # effective batch = 32
+SFT_BATCH_SIZE      = 2       # per GPU (seq_len 8192)
+SFT_GRAD_ACCUM      = 16      # effective batch = 32
 SFT_LR              = 2e-5
 SFT_LR_SCHEDULER    = "cosine"
 SFT_WARMUP_RATIO    = 0.05
 SFT_MAX_GRAD_NORM   = 1.0
-SFT_LOGGING_STEPS   = 50
-SFT_SAVE_STEPS      = 500
+SFT_LOGGING_STEPS   = 10
+SFT_SAVE_STEPS      = 50      # เซฟเช็คพ้อยท์ทุก 50 steps
 
 # ─── Distillation Phase 2 ─────────────────────────────────────────────────────
 DISTILL_EPOCHS       = 3
-DISTILL_BATCH_SIZE   = 4       # จุดคุ้มค่า seq_len 4096 บน H100
-DISTILL_GRAD_ACCUM   = 8       # effective batch = 32
+DISTILL_BATCH_SIZE   = 2       # seq_len 8192
+DISTILL_GRAD_ACCUM   = 16      # effective batch = 32
 DISTILL_LR           = 1e-5
 DISTILL_LR_SCHEDULER = "cosine"
 DISTILL_WARMUP_RATIO = 0.05
 DISTILL_MAX_GRAD_NORM= 1.0
-DISTILL_LOGGING_STEPS= 50
-DISTILL_SAVE_STEPS   = 500
+DISTILL_LOGGING_STEPS= 10
+DISTILL_SAVE_STEPS   = 50      # เซฟเช็คพ้อยท์ทุก 50 steps
 
 # KL distillation settings
 KL_TEMPERATURE = 2.0      # temperature scaling สำหรับ soft labels
@@ -90,7 +90,7 @@ ALPHA          = 0.5      # KL weight; CE weight = (1 - ALPHA)
 TOP_K_LOGITS   = 50       # เก็บแค่ top-K logits เพื่อประหยัด RAM
 
 # ─── Sequence ─────────────────────────────────────────────────────────────────
-MAX_SEQ_LEN = 4096        # 2x เดิม, ยาวพอสำหรับ <think> chains + เร็ว 4x กว่า 8192
+MAX_SEQ_LEN = 8192        # ครอบคลุม 97.6% ของ dataset
 
 # ─── Misc ─────────────────────────────────────────────────────────────────────
 SEED            = 42
