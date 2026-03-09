@@ -39,6 +39,7 @@ LOG_DIR         = os.path.join(BASE_DIR, "logs")
 # ─── Hugging Face Hub & W&B ───────────────────────────────────────────────────
 PUSH_TO_HUB     = True
 HF_REPO_ID      = "Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B"
+HF_DISTILL_REPO_ID = "Phonsiri/Qwen3.5-0.8B-Distillation-Phase2" # รีสโปสำหรับผลลัพธ์ Distill เพียวๆ
 HF_DATASET_REPO = "Phonsiri/Qwen3.5-Distillation-Dataset"
 WANDB_PROJECT   = "qwen3.5-distillation"
 

@@ -301,13 +301,13 @@ def main(args):
                 if config.PUSH_TO_HUB and not args.dry_run:
                     try:
                         api = HfApi()
-                        api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+                        api.create_repo(repo_id=config.HF_DISTILL_REPO_ID, repo_type="model", exist_ok=True)
                         api.upload_folder(
                             folder_path=ckpt_dir,
-                            repo_id=config.HF_REPO_ID,
+                            repo_id=config.HF_DISTILL_REPO_ID,
                             path_in_repo=f"distill_step_{n_steps}",
                             repo_type="model",
-                            commit_message=f"Distill checkpoint step {n_steps}"
+                            commit_message=f"Distill checkpoint step {n_steps} (Model + Optimizer)"
                         )
                         print(f"  ✅ Pushed distill step {n_steps} to Hub!")
                     except Exception as e:
@@ -335,19 +335,21 @@ def main(args):
         epoch_ckpt = os.path.join(config.OUTPUT_DIR, f"epoch_{epoch+1}")
         student.save_pretrained(epoch_ckpt)
         s_tokenizer.save_pretrained(epoch_ckpt)
-        print(f"  Saved epoch checkpoint → {epoch_ckpt}")
+        torch.save(optimizer.state_dict(), os.path.join(epoch_ckpt, "optimizer.pt"))
+        torch.save(scheduler.state_dict(), os.path.join(epoch_ckpt, "scheduler.pt"))
+        print(f"  Saved epoch checkpoint (Model + Optimizer) → {epoch_ckpt}")
         
         if config.PUSH_TO_HUB and not args.dry_run:
             print(f"  Pushing epoch {epoch+1} to Hub...")
             try:
                 api = HfApi()
-                api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+                api.create_repo(repo_id=config.HF_DISTILL_REPO_ID, repo_type="model", exist_ok=True)
                 api.upload_folder(
                     folder_path=epoch_ckpt,
-                    repo_id=config.HF_REPO_ID,
+                    repo_id=config.HF_DISTILL_REPO_ID,
                     path_in_repo=f"epoch_{epoch+1}",
                     repo_type="model",
-                    commit_message=f"Upload Distillation Checkpoint Epoch {epoch+1}"
+                    commit_message=f"Upload Distillation Checkpoint Epoch {epoch+1} (Model + Optimizer)"
                 )
                 print(f"  ✅ Uploaded epoch {epoch+1} to Hub!")
             except Exception as e:
@@ -363,13 +365,13 @@ def main(args):
     
     # ── Push to Hub ────────────────────────────────────────────────────────────
     if config.PUSH_TO_HUB and not args.dry_run:
-        print(f"\nPushing Distilled Model to Hugging Face Hub ({config.HF_REPO_ID})...")
+        print(f"\nPushing Distilled Model to Hugging Face Hub ({config.HF_DISTILL_REPO_ID})...")
         try:
             api = HfApi()
-            api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+            api.create_repo(repo_id=config.HF_DISTILL_REPO_ID, repo_type="model", exist_ok=True)
             api.upload_folder(
                 folder_path=config.OUTPUT_DIR,
-                repo_id=config.HF_REPO_ID,
+                repo_id=config.HF_DISTILL_REPO_ID,
                 repo_type="model",
                 commit_message="Upload Final Distilled Checkpoint including Optimizer"
             )
