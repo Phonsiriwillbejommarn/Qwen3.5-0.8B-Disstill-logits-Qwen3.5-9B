@@ -32,7 +32,7 @@ CODING_DATASET  = "sahil2801/CodeAlpaca-20k"
 BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR        = os.path.join(BASE_DIR, "data")
 SFT_DATA_PATH   = os.path.join(DATA_DIR, "sft_data.jsonl")
-SFT_CKPT_DIR    = os.path.join(BASE_DIR, "checkpoints", "sft_final", "step_50")  # ชี้เป้าไปที่โฟลเดอร์ SFT ที่เซฟไว้
+SFT_CKPT_DIR    = os.path.join(BASE_DIR, "checkpoints", "sft_final", "step_100")  # ชี้เป้าไปที่โฟลเดอร์ SFT ที่เซฟไว้
 OUTPUT_DIR      = os.path.join(BASE_DIR, "output", "distilled_0.8b")
 LOG_DIR         = os.path.join(BASE_DIR, "logs")
 
