@@ -51,18 +51,23 @@ def train_epoch(
     save_steps: int = 50,
     push_to_hub: bool = False,
     dry_run: bool = False,
+    skip_batches: int = 0,
+    initial_step: int = 0,
 ) -> dict:
     """Train one epoch, return metrics"""
     model.train()
     total_loss   = 0.0
     total_tokens = 0
-    step = 0
+    step = initial_step
     nan_count = 0
 
     optimizer.zero_grad()
     pbar = tqdm(dataloader, desc=f"Epoch {epoch+1} SFT", dynamic_ncols=True)
 
     for batch_idx, batch in enumerate(pbar):
+        if batch_idx < skip_batches:
+            continue
+
         input_ids      = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
         labels         = batch["labels"].to(device)
@@ -161,6 +166,15 @@ def main(args):
     os.makedirs(config.LOG_DIR, exist_ok=True)
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device}")
+    
+    # Check resume step
+    resume_dir = None
+    if args.resume_step > 0:
+        resume_dir = os.path.join(config.SFT_CKPT_DIR, f"step_{args.resume_step}")
+        if not os.path.exists(resume_dir):
+            print(f"⚠️ ERROR: Cannot resume from step {args.resume_step}. Directory {resume_dir} not found.")
+            sys.exit(1)
+        print(f"🔄 Resuming from checkpoint: {resume_dir}")
 
     torch.manual_seed(config.SEED)
 
@@ -188,7 +202,7 @@ def main(args):
         sys.exit(1)
 
     # ── Load student ──────────────────────────────────────────────────────────
-    student, tokenizer = load_student(ckpt_path=None, device=device)
+    student, tokenizer = load_student(ckpt_path=resume_dir, device=device)
     student.train()
 
     # Enable gradient checkpointing สำหรับประหยัด VRAM
@@ -213,10 +227,24 @@ def main(args):
         n_warmup      = 2
 
     optimizer = AdamW(student.parameters(), lr=config.SFT_LR, weight_decay=0.01)
+    if resume_dir:
+        optimizer.load_state_dict(torch.load(os.path.join(resume_dir, "optimizer.pt")))
+        print("  ✅ Loaded optimizer state")
+
     scheduler = get_scheduler(optimizer, n_warmup, n_total_steps)
+    if resume_dir:
+        scheduler.load_state_dict(torch.load(os.path.join(resume_dir, "scheduler.pt")))
+        print("  ✅ Loaded scheduler state")
+
+    batches_per_epoch = len(dataloader)
+    total_batches_to_skip = args.resume_step * grad_accum
+    start_epoch = total_batches_to_skip // batches_per_epoch
+    skip_batches_first_epoch = total_batches_to_skip % batches_per_epoch
 
     print(f"Training: {epochs} epochs, ~{n_total_steps} total optimizer steps")
     print(f"Warmup steps: {n_warmup}")
+    if args.resume_step > 0:
+        print(f"🔄 Resuming at Epoch {start_epoch+1}, skipping first {skip_batches_first_epoch} batches.")
 
     # ── Init W&B ──────────────────────────────────────────────────────────────
     if not args.dry_run and config.WANDB_PROJECT:
@@ -233,8 +261,9 @@ def main(args):
     # ── Training Loop ─────────────────────────────────────────────────────────
     log_path = os.path.join(config.LOG_DIR, "sft_log.jsonl")
     start_time = time.time()
+    global_step = args.resume_step
 
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         metrics = train_epoch(
             model=student,
             dataloader=dataloader,
@@ -249,7 +278,10 @@ def main(args):
             save_steps=config.SFT_SAVE_STEPS,
             push_to_hub=config.PUSH_TO_HUB,
             dry_run=args.dry_run,
+            skip_batches=skip_batches_first_epoch if epoch == start_epoch else 0,
+            initial_step=global_step,
         )
+        global_step = metrics["steps"]
 
         elapsed = (time.time() - start_time) / 60
         print(f"\nEpoch {epoch+1}/{epochs} — loss: {metrics['loss']:.4f} | time: {elapsed:.1f} min")
@@ -326,5 +358,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_steps", type=int, default=3,  help="Steps per epoch (dry_run)")
     parser.add_argument("--hf_token",  type=str, default=None, help="Hugging Face API token")
     parser.add_argument("--wandb_key", type=str, default=None, help="Weights & Biases API key")
+    parser.add_argument("--resume_step", type=int, default=0, help="Resume training from exactly this step")
     args = parser.parse_args()
     main(args)
