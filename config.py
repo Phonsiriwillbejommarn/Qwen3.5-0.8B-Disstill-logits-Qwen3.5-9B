@@ -28,13 +28,18 @@ MATH_DATASET    = "open-r1/OpenR1-Math-220k"
 GENERAL_DATASET = "anon8231489123/ShareGPT_Vicuna_unfiltered"   # ShareGPT
 CODING_DATASET  = "sahil2801/CodeAlpaca-20k"
 
-# ─── Paths ────────────────────────────────────────────────────────────────────
+# ─── Paths & Hub ──────────────────────────────────────────────────────────────
 BASE_DIR        = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR        = os.path.join(BASE_DIR, "data")
 SFT_DATA_PATH   = os.path.join(DATA_DIR, "sft_data.jsonl")
 SFT_CKPT_DIR    = os.path.join(BASE_DIR, "checkpoints", "sft_final")
 OUTPUT_DIR      = os.path.join(BASE_DIR, "output", "distilled_0.8b")
 LOG_DIR         = os.path.join(BASE_DIR, "logs")
+
+# ─── Hugging Face Hub & W&B ───────────────────────────────────────────────────
+PUSH_TO_HUB     = True
+HF_REPO_ID      = "Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B"
+WANDB_PROJECT   = "qwen3.5-distillation"
 
 # ─── Generation (Teacher) ─────────────────────────────────────────────────────
 MAX_NEW_TOKENS      = 8192    # Official rec is up to 32k/81k, 8k is safe for H100 SFT

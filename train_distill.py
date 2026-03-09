@@ -23,6 +23,8 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from tqdm import tqdm
+import wandb
+from huggingface_hub import HfApi
 
 import config
 from utils.model_utils import load_teacher, load_student
@@ -201,6 +203,20 @@ def main(args):
 
     print(f"Training: {epochs} epochs, ~{n_total_steps} optimizer steps, warmup={n_warmup}")
 
+    # ── Init W&B ──────────────────────────────────────────────────────────────
+    if not args.dry_run and config.WANDB_PROJECT:
+        wandb.init(
+            project=config.WANDB_PROJECT,
+            name="Phase2-Distillation",
+            config={
+                "epochs": config.DISTILL_EPOCHS,
+                "batch_size": config.DISTILL_BATCH_SIZE * config.DISTILL_GRAD_ACCUM,
+                "lr": config.DISTILL_LR,
+                "kl_temp": config.KL_TEMPERATURE,
+                "alpha": config.ALPHA
+            }
+        )
+
     # ── Training Loop ─────────────────────────────────────────────────────────
     log_path   = os.path.join(config.LOG_DIR, "distill_log.jsonl")
     start_time = time.time()
@@ -236,12 +252,24 @@ def main(args):
 
             if n_steps % config.DISTILL_LOGGING_STEPS == 0:
                 avg = epoch_total / n_steps
+                lr  = optimizer.param_groups[0]['lr']
                 pbar.set_postfix({
                     "loss": f"{avg:.3f}",
                     "kl":   f"{epoch_kl/n_steps:.3f}",
                     "ce":   f"{epoch_ce/n_steps:.3f}",
-                    "lr":   f"{optimizer.param_groups[0]['lr']:.2e}",
+                    "lr":   f"{lr:.2e}",
                 })
+                
+                # W&B Logging
+                if wandb.run is not None:
+                    wandb.log({
+                        "train/total_loss": avg,
+                        "train/kl_loss": epoch_kl/n_steps,
+                        "train/ce_loss": epoch_ce/n_steps,
+                        "train/lr": lr,
+                        "train/step": n_steps,
+                        "train/epoch": epoch + (batch_idx / len(dataloader))
+                    }, step=n_steps)
 
             if args.dry_run and n_steps >= args.max_steps:
                 break
@@ -270,8 +298,32 @@ def main(args):
     # ── Final save ─────────────────────────────────────────────────────────────
     student.save_pretrained(config.OUTPUT_DIR)
     s_tokenizer.save_pretrained(config.OUTPUT_DIR)
+    
+    # Save optimizer and scheduler
+    torch.save(optimizer.state_dict(), os.path.join(config.OUTPUT_DIR, "optimizer.pt"))
+    torch.save(scheduler.state_dict(), os.path.join(config.OUTPUT_DIR, "scheduler.pt"))
+    
+    # ── Push to Hub ────────────────────────────────────────────────────────────
+    if config.PUSH_TO_HUB and not args.dry_run:
+        print(f"\nPushing Distilled Model to Hugging Face Hub ({config.HF_REPO_ID})...")
+        try:
+            api = HfApi()
+            api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+            api.upload_folder(
+                folder_path=config.OUTPUT_DIR,
+                repo_id=config.HF_REPO_ID,
+                repo_type="model",
+                commit_message="Upload Final Distilled Checkpoint including Optimizer"
+            )
+            print("✅ Successfully pushed distilled model to Hub!")
+        except Exception as e:
+            print(f"⚠️ Failed to push to Hub: {e}")
+
     print(f"\n✅ Distillation Phase 2 complete!")
     print(f"   Final model: {config.OUTPUT_DIR}")
+
+    if wandb.run is not None:
+        wandb.finish()
 
 
 if __name__ == "__main__":

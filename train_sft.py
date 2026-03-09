@@ -22,6 +22,8 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 from functools import partial
 from tqdm import tqdm
+import wandb
+from huggingface_hub import HfApi
 
 import config
 from utils.model_utils import load_student
@@ -87,6 +89,15 @@ def train_epoch(
                 avg_loss = total_loss / max(total_tokens, 1)
                 lr = optimizer.param_groups[0]["lr"]
                 pbar.set_postfix({"loss": f"{avg_loss:.4f}", "lr": f"{lr:.2e}"})
+                
+                # W&B Logging
+                if wandb.run is not None:
+                    wandb.log({
+                        "train/loss": avg_loss,
+                        "train/lr": lr,
+                        "train/step": step,
+                        "train/epoch": epoch + (batch_idx / len(dataloader))
+                    }, step=step)
 
             if max_steps and step >= max_steps:
                 break
@@ -141,6 +152,18 @@ def main(args):
     print(f"Training: {epochs} epochs, ~{n_total_steps} total optimizer steps")
     print(f"Warmup steps: {n_warmup}")
 
+    # ── Init W&B ──────────────────────────────────────────────────────────────
+    if not args.dry_run and config.WANDB_PROJECT:
+        wandb.init(
+            project=config.WANDB_PROJECT,
+            name="Phase1-SFT",
+            config={
+                "epochs": config.SFT_EPOCHS,
+                "batch_size": config.SFT_BATCH_SIZE * config.SFT_GRAD_ACCUM,
+                "lr": config.SFT_LR,
+            }
+        )
+
     # ── Training Loop ─────────────────────────────────────────────────────────
     log_path = os.path.join(config.LOG_DIR, "sft_log.jsonl")
     start_time = time.time()
@@ -175,9 +198,34 @@ def main(args):
     print(f"\nSaving SFT checkpoint to {config.SFT_CKPT_DIR}...")
     student.save_pretrained(config.SFT_CKPT_DIR)
     tokenizer.save_pretrained(config.SFT_CKPT_DIR)
+    
+    # Save optimizer and scheduler for resuming / full checkpoint push
+    torch.save(optimizer.state_dict(), os.path.join(config.SFT_CKPT_DIR, "optimizer.pt"))
+    torch.save(scheduler.state_dict(), os.path.join(config.SFT_CKPT_DIR, "scheduler.pt"))
+    
+    # ── Push to Hub ────────────────────────────────────────────────────────────
+    if config.PUSH_TO_HUB and not args.dry_run:
+        print(f"Pushing SFT Checkpoint to Hugging Face Hub ({config.HF_REPO_ID})...")
+        try:
+            api = HfApi()
+            api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+            api.upload_folder(
+                folder_path=config.SFT_CKPT_DIR,
+                path_in_repo="sft_checkpoint",
+                repo_id=config.HF_REPO_ID,
+                repo_type="model",
+                commit_message="Upload SFT Phase 1 Checkpoint including Optimizer"
+            )
+            print("✅ Successfully pushed SFT checkpoint to Hub!")
+        except Exception as e:
+            print(f"⚠️ Failed to push to Hub: {e}")
+
     print("✅ SFT Phase 1 complete!")
     print(f"   Checkpoint: {config.SFT_CKPT_DIR}")
     print(f"   Final loss: {metrics['loss']:.4f}")
+
+    if wandb.run is not None:
+        wandb.finish()
 
 
 if __name__ == "__main__":

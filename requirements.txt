@@ -8,3 +8,5 @@ jsonlines>=4.0.0
 sentencepiece>=0.2.0
 protobuf>=4.25.0
 vllm>=0.4.0             # For fast SFT data generation
+wandb>=0.16.0           # For tracking
+huggingface_hub>=0.20.0 # For pushing models
