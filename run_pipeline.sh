@@ -23,13 +23,17 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-AUTH_ARGS=""
+HF_ARGS=""
 if [ -n "$HF_TOKEN" ]; then
-    AUTH_ARGS="--hf_token $HF_TOKEN"
+    HF_ARGS="--hf_token $HF_TOKEN"
 fi
+
+WANDB_ARGS=""
 if [ -n "$WANDB_KEY" ]; then
-    AUTH_ARGS="$AUTH_ARGS --wandb_key $WANDB_KEY"
+    WANDB_ARGS="--wandb_key $WANDB_KEY"
 fi
+
+ALL_ARGS="$HF_ARGS $WANDB_ARGS"
 
 echo -e "${BLUE}================================================================${NC}"
 echo -e "${BLUE}  Qwen3.5-9B to 0.8B Knowledge Distillation Pipeline (H100) ${NC}"
@@ -49,19 +53,19 @@ echo ""
 echo -e "${GREEN}[2/4] Generating SFT Data from Teacher (Qwen3.5-9B-Instruct)...${NC}"
 echo "This will generate responses for 15,000 prompts (Math, General, Coding)."
 echo "Press Ctrl+C to abort, or it will resume if previously interrupted."
-python generate_sft_data.py $AUTH_ARGS
+python generate_sft_data.py $HF_ARGS
 echo -e "${GREEN}✓ Data generation complete.${NC}\n"
 
 # 3. Phase 1: SFT (Warm-up)
 echo -e "${GREEN}[3/4] Running Phase 1: Off-policy SFT (Warm-up)...${NC}"
 echo "Training student (Qwen3.5-0.8B-Base) on teacher-generated data."
-python train_sft.py $AUTH_ARGS
+python train_sft.py $ALL_ARGS
 echo -e "${GREEN}✓ Phase 1 SFT complete.${NC}\n"
 
 # 4. Phase 2: KL Distillation
 echo -e "${GREEN}[4/4] Running Phase 2: On-policy KL Distillation...${NC}"
 echo "Aligning student's reasoning with teacher using Forward KL divergence."
-python train_distill.py $AUTH_ARGS
+python train_distill.py $ALL_ARGS
 echo -e "${GREEN}✓ Phase 2 Distillation complete.${NC}\n"
 
 echo -e "${BLUE}================================================================${NC}"
