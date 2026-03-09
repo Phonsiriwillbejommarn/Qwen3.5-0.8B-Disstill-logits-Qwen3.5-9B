@@ -71,7 +71,7 @@ SFT_LR_SCHEDULER    = "cosine"
 SFT_WARMUP_RATIO    = 0.05
 SFT_MAX_GRAD_NORM   = 1.0
 SFT_LOGGING_STEPS   = 10
-SFT_SAVE_STEPS      = 50      # เซฟเช็คพ้อยท์ทุก 50 steps
+SFT_SAVE_STEPS      = 20      # เซฟเช็คพ้อยท์ทุก 20 steps
 
 # ─── Distillation Phase 2 ─────────────────────────────────────────────────────
 DISTILL_EPOCHS       = 3
@@ -82,7 +82,7 @@ DISTILL_LR_SCHEDULER = "cosine"
 DISTILL_WARMUP_RATIO = 0.05
 DISTILL_MAX_GRAD_NORM= 1.0
 DISTILL_LOGGING_STEPS= 10
-DISTILL_SAVE_STEPS   = 50      # เซฟเช็คพ้อยท์ทุก 50 steps
+DISTILL_SAVE_STEPS   = 20      # เซฟเช็คพ้อยท์ทุก 20 steps
 
 # KL distillation settings
 KL_TEMPERATURE = 2.0      # temperature scaling สำหรับ soft labels
@@ -90,7 +90,7 @@ ALPHA          = 0.5      # KL weight; CE weight = (1 - ALPHA)
 TOP_K_LOGITS   = 50       # เก็บแค่ top-K logits เพื่อประหยัด RAM
 
 # ─── Sequence ─────────────────────────────────────────────────────────────────
-MAX_SEQ_LEN = 8192        # ครอบคลุม 97.6% ของ dataset
+MAX_SEQ_LEN = 7000        # ครอบคลุม 90.4% ของ dataset, สมดุลความเร็ว+คุณภาพ
 
 # ─── Misc ─────────────────────────────────────────────────────────────────────
 SEED            = 42

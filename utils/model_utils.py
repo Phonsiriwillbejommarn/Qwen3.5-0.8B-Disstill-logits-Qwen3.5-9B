@@ -63,7 +63,7 @@ def load_student(
 
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=torch.float16,
+        torch_dtype=torch.bfloat16,   # bf16 = H100 native, ไม่ overflow เหมือน fp16
         device_map=device,
         trust_remote_code=True,
         attn_implementation="sdpa" if getattr(config, "USE_SDPA", True) else "eager",

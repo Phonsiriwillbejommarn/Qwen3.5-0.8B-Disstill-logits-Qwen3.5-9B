@@ -47,12 +47,17 @@ def train_epoch(
     max_grad_norm: float,
     epoch: int,
     max_steps: int | None = None,
+    tokenizer=None,
+    save_steps: int = 50,
+    push_to_hub: bool = False,
+    dry_run: bool = False,
 ) -> dict:
     """Train one epoch, return metrics"""
     model.train()
     total_loss   = 0.0
     total_tokens = 0
     step = 0
+    nan_count = 0
 
     optimizer.zero_grad()
     pbar = tqdm(dataloader, desc=f"Epoch {epoch+1} SFT", dynamic_ncols=True)
@@ -62,6 +67,10 @@ def train_epoch(
         attention_mask = batch["attention_mask"].to(device)
         labels         = batch["labels"].to(device)
 
+        # Skip batches where all labels are masked
+        if (labels == -100).all():
+            continue
+
         # Forward pass
         outputs = model(
             input_ids=input_ids,
@@ -69,6 +78,14 @@ def train_epoch(
             labels=labels,
         )
         loss = outputs.loss / grad_accum
+
+        # NaN detection — skip bad batches
+        if torch.isnan(loss) or torch.isinf(loss):
+            nan_count += 1
+            optimizer.zero_grad()
+            if nan_count % 10 == 0:
+                print(f"\n⚠️  NaN/Inf loss detected {nan_count} times (skipping batch {batch_idx})")
+            continue
 
         loss.backward()
 
@@ -88,7 +105,7 @@ def train_epoch(
             if step % config.SFT_LOGGING_STEPS == 0:
                 avg_loss = total_loss / max(total_tokens, 1)
                 lr = optimizer.param_groups[0]["lr"]
-                pbar.set_postfix({"loss": f"{avg_loss:.4f}", "lr": f"{lr:.2e}"})
+                pbar.set_postfix({"loss": f"{avg_loss:.4f}", "lr": f"{lr:.2e}", "nan": nan_count})
                 
                 # W&B Logging
                 if wandb.run is not None:
@@ -96,14 +113,40 @@ def train_epoch(
                         "train/loss": avg_loss,
                         "train/lr": lr,
                         "train/step": step,
-                        "train/epoch": epoch + (batch_idx / len(dataloader))
+                        "train/epoch": epoch + (batch_idx / len(dataloader)),
+                        "train/nan_count": nan_count,
                     }, step=step)
+
+            # Step-based checkpoint saving
+            if step % save_steps == 0 and tokenizer is not None:
+                ckpt_dir = os.path.join(config.SFT_CKPT_DIR, f"step_{step}")
+                os.makedirs(ckpt_dir, exist_ok=True)
+                model.save_pretrained(ckpt_dir)
+                tokenizer.save_pretrained(ckpt_dir)
+                print(f"\n💾 Saved checkpoint step {step} → {ckpt_dir}")
+
+                if push_to_hub and not dry_run:
+                    try:
+                        api = HfApi()
+                        api.create_repo(repo_id=config.HF_REPO_ID, repo_type="model", exist_ok=True)
+                        api.upload_folder(
+                            folder_path=ckpt_dir,
+                            repo_id=config.HF_REPO_ID,
+                            path_in_repo=f"sft_step_{step}",
+                            repo_type="model",
+                            commit_message=f"SFT checkpoint step {step}"
+                        )
+                        print(f"  ✅ Pushed step {step} to Hub!")
+                    except Exception as e:
+                        print(f"  ⚠️ Hub push failed: {e}")
 
             if max_steps and step >= max_steps:
                 break
 
     avg_loss = total_loss / max(total_tokens, 1)
-    return {"loss": avg_loss, "steps": step}
+    if nan_count > 0:
+        print(f"\n⚠️  Total NaN/Inf batches skipped: {nan_count}")
+    return {"loss": avg_loss, "steps": step, "nan_count": nan_count}
 
 
 def main(args):
@@ -196,6 +239,10 @@ def main(args):
             max_grad_norm=config.SFT_MAX_GRAD_NORM,
             epoch=epoch,
             max_steps=args.max_steps if args.dry_run else None,
+            tokenizer=tokenizer,
+            save_steps=config.SFT_SAVE_STEPS,
+            push_to_hub=config.PUSH_TO_HUB,
+            dry_run=args.dry_run,
         )
 
         elapsed = (time.time() - start_time) / 60
