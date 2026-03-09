@@ -46,6 +46,16 @@ SYSTEM_PROMPTS = {
 
 
 def main(args):
+    # ── Token Authentication ──────────────────────────────────────────────────
+    if args.hf_token:
+        os.environ["HF_TOKEN"] = args.hf_token
+        try:
+            from huggingface_hub import login
+            login(token=args.hf_token)
+            print("Successfully logged in to Hugging Face Hub.")
+        except Exception as e:
+            print(f"Failed to log in to Hugging Face Hub: {e}")
+
     # ── Setup ─────────────────────────────────────────────────────────────────
     os.makedirs(config.DATA_DIR, exist_ok=True)
     out_path = config.SFT_DATA_PATH
@@ -162,5 +172,6 @@ if __name__ == "__main__":
     parser.add_argument("--n_math",    type=int, default=5,  help="Math samples (dry_run)")
     parser.add_argument("--n_general", type=int, default=2,  help="General samples (dry_run)")
     parser.add_argument("--n_coding",  type=int, default=2,  help="Coding samples (dry_run)")
+    parser.add_argument("--hf_token",  type=str, default=None, help="Hugging Face API token")
     args = parser.parse_args()
     main(args)

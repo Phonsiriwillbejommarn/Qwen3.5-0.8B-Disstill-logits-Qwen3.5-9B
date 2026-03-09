@@ -167,6 +167,23 @@ def main(args):
     print(f"Device: {device}")
     print(f"KL type: {'Reverse KL' if args.use_reverse_kl else 'Forward KL (default)'}")
 
+    # ── Token Authentication ──────────────────────────────────────────────────
+    if args.hf_token:
+        try:
+            from huggingface_hub import login
+            login(token=args.hf_token)
+            print("Successfully logged in to Hugging Face Hub.")
+        except Exception as e:
+            print(f"Failed to log in to Hugging Face Hub: {e}")
+
+    if args.wandb_key:
+        try:
+            import wandb
+            wandb.login(key=args.wandb_key)
+            print("Successfully logged in to Weights & Biases.")
+        except Exception as e:
+            print(f"Failed to log in to Weights & Biases: {e}")
+
     # ── Check SFT checkpoint ──────────────────────────────────────────────────
     if not os.path.exists(config.SFT_CKPT_DIR):
         print(f"ERROR: SFT checkpoint not found at {config.SFT_CKPT_DIR}")
@@ -331,5 +348,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry_run",        action="store_true", help="Quick sanity check")
     parser.add_argument("--max_steps",      type=int, default=3, help="Steps per epoch (dry_run)")
     parser.add_argument("--use_reverse_kl", action="store_true", help="Use Reverse KL instead of Forward KL")
+    parser.add_argument("--hf_token",       type=str, default=None, help="Hugging Face API token")
+    parser.add_argument("--wandb_key",      type=str, default=None, help="Weights & Biases API key")
     args = parser.parse_args()
     main(args)

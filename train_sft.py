@@ -115,6 +115,23 @@ def main(args):
 
     torch.manual_seed(config.SEED)
 
+    # ── Token Authentication ──────────────────────────────────────────────────
+    if args.hf_token:
+        try:
+            from huggingface_hub import login
+            login(token=args.hf_token)
+            print("Successfully logged in to Hugging Face Hub.")
+        except Exception as e:
+            print(f"Failed to log in to Hugging Face Hub: {e}")
+
+    if args.wandb_key:
+        try:
+            import wandb
+            wandb.login(key=args.wandb_key)
+            print("Successfully logged in to Weights & Biases.")
+        except Exception as e:
+            print(f"Failed to log in to Weights & Biases: {e}")
+
     # ── Check data exists ──────────────────────────────────────────────────────
     if not os.path.exists(config.SFT_DATA_PATH):
         print(f"ERROR: SFT data not found at {config.SFT_DATA_PATH}")
@@ -232,5 +249,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Phase 1: SFT warm-up training")
     parser.add_argument("--dry_run",   action="store_true", help="Quick sanity check")
     parser.add_argument("--max_steps", type=int, default=3,  help="Steps per epoch (dry_run)")
+    parser.add_argument("--hf_token",  type=str, default=None, help="Hugging Face API token")
+    parser.add_argument("--wandb_key", type=str, default=None, help="Weights & Biases API key")
     args = parser.parse_args()
     main(args)
