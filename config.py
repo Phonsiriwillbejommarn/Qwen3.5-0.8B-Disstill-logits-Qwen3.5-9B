@@ -70,7 +70,7 @@ SFT_LR              = 2e-5
 SFT_LR_SCHEDULER    = "cosine"
 SFT_WARMUP_RATIO    = 0.05
 SFT_MAX_GRAD_NORM   = 1.0
-SFT_LOGGING_STEPS   = 10
+SFT_LOGGING_STEPS   = 1       # แสดง loss ทุก step เลย
 SFT_SAVE_STEPS      = 20      # เซฟเช็คพ้อยท์ทุก 20 steps
 
 # ─── Distillation Phase 2 ─────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ DISTILL_LR           = 1e-5
 DISTILL_LR_SCHEDULER = "cosine"
 DISTILL_WARMUP_RATIO = 0.05
 DISTILL_MAX_GRAD_NORM= 1.0
-DISTILL_LOGGING_STEPS= 10
+DISTILL_LOGGING_STEPS= 1       # แสดง loss ทุก step เลย
 DISTILL_SAVE_STEPS   = 20      # เซฟเช็คพ้อยท์ทุก 20 steps
 
 # KL distillation settings
