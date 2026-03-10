@@ -1,13 +1,13 @@
 # Qwen3.5 0.8B - Knowledge Distillation from Qwen3.5 9B
 
-This model is a distilled version of **[Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B](https://huggingface.co/Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B)** (which is the Phase 1 SFT checkpoint), fine-tuned using a Two-Phase Knowledge Distillation approach with **[Qwen/Qwen3.5-9B-Instruct](https://huggingface.co/Qwen/Qwen3.5-9B-Instruct)** as the teacher model on an NVIDIA H100 (80GB). 
+This model is a distilled version of **[Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B](https://huggingface.co/Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B)** (which is the Phase 1 SFT checkpoint), fine-tuned using a Two-Phase Knowledge Distillation approach with **[Qwen/Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B)** as the teacher model on an NVIDIA H100 (80GB). 
 
 The dataset used during distillation is **[Phonsiri/Qwen3.5-Distillation-Dataset](https://huggingface.co/datasets/Phonsiri/Qwen3.5-Distillation-Dataset)**.
 
 The goal is to transfer the superior reasoning and formatting capabilities of the 9B model into the lightweight 0.8B architecture.
 
 ## 🚀 Model Details
-- **Teacher Model:** `Qwen/Qwen3.5-9B-Instruct`
+- **Teacher Model:** `Qwen/Qwen3.5-9B`
 - **Student Model (Phase 1):** `Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B`
 - **Language(s):** English (Primary), Thai
 - **Architecture:** Causal Language Modeling (Decoder-only)
