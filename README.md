@@ -1,12 +1,14 @@
 # Qwen3.5 0.8B - Knowledge Distillation from Qwen3.5 9B
 
-This model is a distilled version of **[Qwen/Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B)**, fine-tuned using a Two-Phase Knowledge Distillation approach with **[Qwen/Qwen3.5-9B-Instruct](https://huggingface.co/Qwen/Qwen3.5-9B-Instruct)** as the teacher model on an NVIDIA H100 (80GB). 
+This model is a distilled version of **[Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B](https://huggingface.co/Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B)** (which is the Phase 1 SFT checkpoint), fine-tuned using a Two-Phase Knowledge Distillation approach with **[Qwen/Qwen3.5-9B-Instruct](https://huggingface.co/Qwen/Qwen3.5-9B-Instruct)** as the teacher model on an NVIDIA H100 (80GB). 
+
+The dataset used during distillation is **[Phonsiri/Qwen3.5-Distillation-Dataset](https://huggingface.co/datasets/Phonsiri/Qwen3.5-Distillation-Dataset)**.
 
 The goal is to transfer the superior reasoning and formatting capabilities of the 9B model into the lightweight 0.8B architecture.
 
 ## 🚀 Model Details
 - **Teacher Model:** `Qwen/Qwen3.5-9B-Instruct`
-- **Student Model (Base):** `Qwen/Qwen3.5-0.8B`
+- **Student Model (Phase 1):** `Phonsiri/Qwen3.5-0.8B-Base-Distillation-Qwen3.5-9B`
 - **Language(s):** English (Primary), Thai
 - **Architecture:** Causal Language Modeling (Decoder-only)
 - **License:** Apache 2.0
@@ -15,7 +17,7 @@ The goal is to transfer the superior reasoning and formatting capabilities of th
 The training pipeline strictly followed a two-phase distillation strategy:
 
 ### Phase 1: Supervised Fine-Tuning (SFT)
-The student model was first fine-tuned on a custom high-quality dataset (`Phonsiri/Qwen3.5-Distillation-Dataset`) comprising **15,000 prompts**. The dataset contains Math reasoning, General instructions, and Coding tasks. The teacher model generated the ground-truth responses (with `<think>` reasoning chains enabled) to ensure the student learns the teacher's structure and formatting.
+The student model was first fine-tuned on a custom high-quality dataset (`Phonsiri/Qwen3.5-Distillation-Dataset`) comprising **7,500 prompts**. The dataset contains Math reasoning, General instructions, and Coding tasks. The teacher model generated the ground-truth responses (with `<think>` reasoning chains enabled) to ensure the student learns the teacher's structure and formatting.
 
 ### Phase 2: Logits Distillation (On-Policy)
 After Phase 1, the model underwent On-Policy Logits Distillation. During this phase, both the Teacher (Frozen) and Student models generated logits dynamically during training. 
