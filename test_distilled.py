@@ -30,16 +30,12 @@ def chat(user_prompt: str, system_prompt: str = None,
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_prompt})
 
-    # Note: enable_thinking parameter might not be supported if using official Qwen template
     text = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True,
+        enable_thinking=enable_thinking,
     )
-    
-    # If we want to strictly force thinking, we can manually append <think>\n 
-    if enable_thinking and not text.endswith("<think>\n"):
-        text += "<think>\n"
 
     inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
